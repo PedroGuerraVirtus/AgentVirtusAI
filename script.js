@@ -21,17 +21,17 @@ if (leadCaptureForm) {
         mailchimpFormContainer.innerHTML = `
             <div id="mc_embed_shell">
                 <div id="mc_embed_signup">
-                    <form action="https://virtusmidia.us11.list-manage.com/subscribe/post?u=3c8ae72561699831838b98633&amp;id=c125290494&amp;f_id=00a7cbe3f0" method="post" id="mc-embedded-subscribe-form" name="mc-embedded-subscribe-form" class="validate" target="_self" novalidate="">
+                    <form id="mc-embedded-subscribe-form" name="mc-embedded-subscribe-form" class="validate" novalidate>
                         <div id="mc_embed_signup_scroll">
                             <h2>Get access to the content</h2>
                             <div class="indicates-required"><span class="asterisk">*</span> indicates required</div>
                             <div class="mc-field-group">
                                 <label for="mce-EMAIL">Melhor e-mail <span class="asterisk">*</span></label>
-                                <input type="email" name="EMAIL" class="required email" id="mce-EMAIL" required="" value="${formDataObj.email || ''}">
+                                <input type="email" name="EMAIL" class="required email" id="mce-EMAIL" required value="${formDataObj.email || ''}">
                             </div>
                             <div class="mc-field-group">
                                 <label for="mce-FNAME">Nome <span class="asterisk">*</span></label>
-                                <input type="text" name="FNAME" class="required text" id="mce-FNAME" required="" value="${formDataObj.name || ''}">
+                                <input type="text" name="FNAME" class="required text" id="mce-FNAME" required value="${formDataObj.name || ''}">
                             </div>
                             <div class="mc-field-group">
                                 <label for="mce-PHONE">Telefone <span class="asterisk">*</span></label>
@@ -39,9 +39,9 @@ if (leadCaptureForm) {
                             </div>
                             <div class="mc-field-group">
                                 <label for="mce-MMERGE2">Empresa <span class="asterisk">*</span></label>
-                                <input type="text" name="MMERGE2" class="required text" id="mce-MMERGE2" required="" value="${formDataObj.company || ''}">
+                                <input type="text" name="MMERGE2" class="required text" id="mce-MMERGE2" required value="${formDataObj.company || ''}">
                             </div>
-                            <div hidden="">
+                            <div hidden>
                                 <input type="hidden" name="tags" value="10281509">
                             </div>
                             <div id="mce-responses" class="clear">
@@ -147,79 +147,82 @@ if (leadCaptureForm) {
         `;
         document.head.appendChild(styleElement);
         
-        // Load jQuery and Mailchimp validation script
-        if (!window.jQuery) {
-            const jQueryScript = document.createElement('script');
-            jQueryScript.type = 'text/javascript';
-            jQueryScript.src = 'https://code.jquery.com/jquery-3.6.0.min.js';
-            document.head.appendChild(jQueryScript);
-            jQueryScript.onload = function() {
-                loadMailchimpScript();
-            };
-        } else {
-            loadMailchimpScript();
-        }
-
-        function loadMailchimpScript() {
-            const mailchimpScript = document.createElement('script');
-            mailchimpScript.type = 'text/javascript';
-            mailchimpScript.src = '//s3.amazonaws.com/downloads.mailchimp.com/js/mc-validate.js';
-            document.head.appendChild(mailchimpScript);
-            mailchimpScript.onload = function() {
-                // Set up Mailchimp field mappings
-                const setupScript = document.createElement('script');
-                setupScript.type = 'text/javascript';
-                setupScript.textContent = `
-                    (function($) {
-                        window.fnames = new Array();
-                        window.ftypes = new Array();
-                        fnames[0] = 'EMAIL';
-                        ftypes[0] = 'email';
-                        fnames[1] = 'FNAME';
-                        ftypes[1] = 'text';
-                        fnames[2] = 'PHONE';
-                        ftypes[2] = 'phone';
-                        fnames[3] = 'MMERGE2';
-                        ftypes[3] = 'text';
-                    })(jQuery);
-                    var $mcj = jQuery.noConflict(true);
-                `;
-                document.head.appendChild(setupScript);
-
-                // Handle Mailchimp form submission
-                const mailchimpForm = document.getElementById('mc-embedded-subscribe-form');
-                if (mailchimpForm) {
-                    // The mc-validate.js script will handle the AJAX submission
-                    const successResponseElement = document.getElementById('mce-success-response');
-                    const errorResponseElement = document.getElementById('mce-error-response');
-                    
-                    const observer = new MutationObserver(function(mutations) {
-                        mutations.forEach(function(mutation) {
-                            if (mutation.target === successResponseElement && 
-                                mutation.attributeName === 'style' && 
-                                successResponseElement.style.display !== 'none') {
-                                // Success message is displayed, show custom success message
-                                const mailchimpContainer = document.getElementById('mc_embed_signup');
-                                const successMessage = document.querySelector('.success-message');
+        // Handle Mailchimp form submission
+        const mailchimpForm = document.getElementById('mc-embedded-subscribe-form');
+        if (mailchimpForm) {
+            mailchimpForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                // Collect form data
+                const mailchimpData = new FormData(mailchimpForm);
+                const mailchimpObj = {};
+                mailchimpData.forEach((value, key) => {
+                    mailchimpObj[key] = value;
+                });
+                
+                // Construct the payload for Mailchimp
+                const payload = {
+                    EMAIL: mailchimpObj['EMAIL'],
+                    FNAME: mailchimpObj['FNAME'],
+                    PHONE: mailchimpObj['PHONE'],
+                    MMERGE2: mailchimpObj['MMERGE2'],
+                    tags: mailchimpObj['tags'],
+                    'b_3c8ae72561699831838b98633_c125290494': mailchimpObj['b_3c8ae72561699831838b98633_c125290494']
+                };
+                
+                // Send AJAX request to Mailchimp
+                fetch('https://virtusmidia.us11.list-manage.com/subscribe/post-json?u=3c8ae72561699831838b98633&id=c125290494&f_id=00a7cbe3f0&c=?', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams(payload).toString(),
+                    mode: 'cors'
+                })
+                .then(response => response.text())
+                .then(data => {
+                    // Mailchimp responds with JSONP, so we need to clean it
+                    const jsonData = data.match(/\{.*\}/);
+                    if (jsonData) {
+                        const result = JSON.parse(jsonData[0]);
+                        const successResponseElement = document.getElementById('mce-success-response');
+                        const errorResponseElement = document.getElementById('mce-error-response');
+                        
+                        if (result.result === 'success') {
+                            // Show success message
+                            successResponseElement.textContent = result.msg;
+                            successResponseElement.style.display = 'block';
+                            errorResponseElement.style.display = 'none';
+                            
+                            // Show custom success message
+                            const mailchimpContainer = document.getElementById('mc_embed_signup');
+                            const successMessage = document.querySelector('.success-message');
+                            if (mailchimpContainer && successMessage) {
+                                mailchimpContainer.style.display = 'none';
+                                successMessage.style.display = 'block';
                                 
-                                if (mailchimpContainer && successMessage) {
-                                    mailchimpContainer.style.display = 'none';
-                                    successMessage.style.display = 'block';
-                                    
-                                    // Add event listener to the access content button
-                                    document.getElementById('access-content-btn').addEventListener('click', function() {
-                                        hidePopup();
-                                    });
-                                }
+                                // Add event listener to access content button
+                                document.getElementById('access-content-btn').addEventListener('click', function() {
+                                    hidePopup();
+                                });
                             }
-                        });
-                    });
-                    
-                    // Start observing the success response element
-                    observer.observe(successResponseElement, { attributes: true });
-                    observer.observe(errorResponseElement, { attributes: true });
-                }
-            };
+                        } else {
+                            // Show error message
+                            errorResponseElement.textContent = result.msg;
+                            errorResponseElement.style.display = 'block';
+                            successResponseElement.style.display = 'none';
+                        }
+                    } else {
+                        throw new Error('Invalid response from Mailchimp');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error submitting to Mailchimp:', error);
+                    const errorResponseElement = document.getElementById('mce-error-response');
+                    errorResponseElement.textContent = 'An error occurred. Please try again later.';
+                    errorResponseElement.style.display = 'block';
+                });
+            });
         }
     });
 }
